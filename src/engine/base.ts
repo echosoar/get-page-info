@@ -22,7 +22,7 @@ export class BasePage {
       favicon:  this.getFavicon(),
     }
   }
-  getUserInfo(): IPageAuthorInfo {
+  getAuthorInfo(): IPageAuthorInfo {
     return {}
   }
   getContentInfo(): IPageMainContentInfo {
@@ -46,6 +46,8 @@ export class BasePage {
     content = content.replace(/<header(\s+[^>]*)?>.*?<\/header>/g, '')
     content = content.replace(/<footer(\s+[^>]*)?>.*?<\/footer>/g, '')
     content = content.replace(/<form(\s+[^>]*)?>.*?<\/form>/g, '')
+    content = content.replace(/<style(\s+[^>]*)?>.*?<\/style>/g, '')
+    content = content.replace(/<textarea(\s+[^>]*)?>.*?<\/textarea>/g, '')
     if (content.includes('<article')) {
       let articleInfo = /<article(\s+[^>]*)?>(.*)<\/article>/i.exec(this.html);
       if (articleInfo && articleInfo[2]) {

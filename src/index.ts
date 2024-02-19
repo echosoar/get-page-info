@@ -1,6 +1,7 @@
 import { allEngine } from "./engine";
 import { BasePage } from "./engine/base";
 import { IPageInfo, IPageInfoOptions } from "./interface";
+export * from './interface';
 
 export const getPageInfo = async (url: string, options: IPageInfoOptions = {}): Promise<IPageInfo> => {
   const defaultInfo: IPageInfo = {
@@ -22,7 +23,11 @@ export const getPageInfo = async (url: string, options: IPageInfoOptions = {}): 
   await engine.getPage();
   const baseInfo = engine.getBaseInfo();
   Object.assign(defaultInfo, baseInfo);
-  defaultInfo.author = engine.getUserInfo();
-  defaultInfo.main = engine.getContentInfo();
+  if (options.author !== false) {
+    defaultInfo.author = engine.getAuthorInfo();
+  }
+  if (options.content !== false) {
+    defaultInfo.main = engine.getContentInfo();
+  }
   return defaultInfo;
 }

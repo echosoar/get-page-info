@@ -23,6 +23,6 @@ export interface IPageAuthorInfo {
 }
 
 export interface IPageInfoOptions {
-  userInfo?: boolean;
-  contentInfo?: boolean;
+  author?: boolean;
+  content?: boolean;
 }
