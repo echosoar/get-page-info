@@ -1,7 +1,5 @@
-import { IPageBaseInfo, IPageContentInfo, IPageUserInfo } from "../interface";
-import { omitText, regExecResult } from "../utils";
-import axios from 'axios';
-import * as iconv from 'iconv-lite';
+import { IPageBaseInfo, IPageMainContentInfo, IPageAuthorInfo } from "../interface";
+import { getHtml, regExecResult } from "../utils";
 
 export class BasePage {
   static pageName: string = '';
@@ -15,44 +13,57 @@ export class BasePage {
   async getPage() {
     this.html = await getHtml(this.url)
   }
-  getBaseInfo(): IPageBaseInfo {
+  getBaseInfo(): Partial<IPageBaseInfo> {
     const titleReg = /<title>([^<]*?)<\/title>/i;
     const descReg = /<meta\s+name="description"\s+content="([^"]*)"/i;
     return {
-      title: omitText(regExecResult(titleReg, this.html), 50),
-      desc: omitText(regExecResult(descReg, this.html)),
-      favicon: `${this.url.origin}/favicon.ico`,
+      title: regExecResult(titleReg, this.html),
+      desc: regExecResult(descReg, this.html),
+      favicon:  this.getFavicon(),
     }
   }
-  getUserInfo(): IPageUserInfo {
+  getUserInfo(): IPageAuthorInfo {
     return {}
   }
-  getContentInfo(): IPageContentInfo {
-    return {}
-  }
-}
-
-
-const getHtml = async (url: URL) => {
-  let html = await axios.get(url.href, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36',
-      referer: url.origin,
-      host: url.host
-    },
-    timeout: 5000,
-    responseType: 'arraybuffer',
-  }).then(res => res.data).catch((e) => {
-    return '';
-  });
-
-  if (!html) {
-    return ''
+  getContentInfo(): IPageMainContentInfo {
+    return {
+      content: this.getContent(),
+    }
   }
 
-  let htmlStr = html.toString();
-  if (htmlStr.includes("charset=gbk")) {
-    htmlStr = iconv.decode(html, 'gbk');
+  private getFavicon(): string {
+    const favicon = regExecResult(/<link\s+rel="icon"\s+href="([^"]+)"/, this.html);
+    return favicon || `${this.url.origin}/favicon.ico`
   }
-  return htmlStr.replace(/\n/g, ' ');
+
+  private getContent(): string {
+    let bodyInfo = /<body(\s+[^>]*)?>(.*)<\/body>/i.exec(this.html);
+    if (!bodyInfo || !bodyInfo[2]) {
+      return '';
+    }
+    let content = bodyInfo[2];
+    content = content.replace(/<script(\s+[^>]*)?>.*?<\/script>/g, '')
+    content = content.replace(/<header(\s+[^>]*)?>.*?<\/header>/g, '')
+    content = content.replace(/<footer(\s+[^>]*)?>.*?<\/footer>/g, '')
+    content = content.replace(/<form(\s+[^>]*)?>.*?<\/form>/g, '')
+    if (content.includes('<article')) {
+      let articleInfo = /<article(\s+[^>]*)?>(.*)<\/article>/i.exec(this.html);
+      if (articleInfo && articleInfo[2]) {
+        content = articleInfo[2];
+      }
+    }
+    let pMatched;
+    const contentList = [];
+    let pReg = /<p(\s+[^>]*)?>(.*?)<\/p>/g;
+    while(pMatched =pReg.exec(content)) {
+      let content = pMatched[2];
+      content = content.replace(/<[^>]*>/g, '');
+      content = content.trim();
+      if (!content) {
+        continue;
+      }
+      contentList.push(content);
+    }
+    return contentList.join('\n');
+  }
 }

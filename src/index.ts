@@ -2,30 +2,27 @@ import { allEngine } from "./engine";
 import { BasePage } from "./engine/base";
 import { IPageInfo, IPageInfoOptions } from "./interface";
 
-export const getPageInfo = async (link: string, options: IPageInfoOptions = {}): Promise<IPageInfo> => {
+export const getPageInfo = async (url: string, options: IPageInfoOptions = {}): Promise<IPageInfo> => {
   const defaultInfo: IPageInfo = {
     title: '',
     desc: '',
-    link,
+    url,
   };
-  let url: URL;
+  let urlInfo: URL;
   try {
-    url = new URL(link)
+    urlInfo = new URL(url)
   } catch {
     return defaultInfo;
   }
+  
   const EngineClass = allEngine.find(engine => {
-    return Array.isArray(engine.pageHost) ? engine.pageHost.includes(url.host) : engine.pageHost === url.host;
+    return Array.isArray(engine.pageHost) ? engine.pageHost.includes(urlInfo.host) : engine.pageHost === urlInfo.host;
   }) || BasePage;
-  const engine = new EngineClass(url);
+  const engine = new EngineClass(urlInfo);
   await engine.getPage();
   const baseInfo = engine.getBaseInfo();
   Object.assign(defaultInfo, baseInfo);
-  if (options.userInfo) {
-    defaultInfo.user = engine.getUserInfo();
-  }
-  if (options.contentInfo) {
-    defaultInfo.content = engine.getContentInfo();
-  }
+  defaultInfo.author = engine.getUserInfo();
+  defaultInfo.main = engine.getContentInfo();
   return defaultInfo;
 }

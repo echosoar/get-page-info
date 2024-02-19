@@ -1,23 +1,24 @@
 export interface IPageBaseInfo {
+  url: string;
   title: string;
   desc: string;
   favicon?: string;
 }
 
 export interface IPageInfo extends IPageBaseInfo {
-  link: string;
-  content?: IPageContentInfo;
-  user?: IPageUserInfo;
+  main?: IPageMainContentInfo;
+  author?: IPageAuthorInfo;
 }
 
-export interface IPageContentInfo {
+export interface IPageMainContentInfo {
+  content: string;
   cover?: string;
   time?: number;
 }
-export interface IPageUserInfo {
-  name?: string;
+export interface IPageAuthorInfo {
+  nick?: string;
   account?: string;
-  headimg?: string;
+  cover?: string;
   verified?: boolean;
 }
 
