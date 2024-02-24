@@ -17,4 +17,23 @@ describe('index.test.ts', () => {
     assert(info.url === url);
     assert(info.favicon === 'https://www.dgtle.com/favicon.ico');
   });
+  it('https://explorer.globe.engineer/', async () => {
+    const url = 'https://explorer.globe.engineer/';
+    const info = await getPageInfo(url);
+    assert(info.favicon === 'https://explorer.globe.engineer/favicon.png');
+  });
+  it('https://www.zhihu.com', async () => {
+    const url = 'https://www.zhihu.com/question/538449801/answer/3373318638';
+    const info = await getPageInfo(url);
+    assert(info.favicon === 'https://static.zhihu.com/heifetz/favicon.ico');
+    assert(info.title.includes('顶级享受'));
+    expect(!!info.desc).toBeTruthy();
+  });
+  it('https://toolight.cn/', async () => {
+    const url = 'https://toolight.cn/';
+    const info = await getPageInfo(url);
+    assert(info.favicon === 'https://cdn.1htr.cn/images/toolighticon.png');
+    assert(info.title.includes('偷懒工具'));
+    assert(info.desc.includes('为您的工作生活加油添瓦'));
+  });
 });

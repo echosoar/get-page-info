@@ -1,3 +1,4 @@
+import { join } from "path";
 import { IPageBaseInfo, IPageMainContentInfo, IPageAuthorInfo } from "../interface";
 import { getHtml, regExecResult } from "../utils";
 
@@ -14,8 +15,8 @@ export class BasePage {
     this.html = await getHtml(this.url)
   }
   getBaseInfo(): Partial<IPageBaseInfo> {
-    const titleReg = /<title>([^<]*?)<\/title>/i;
-    const descReg = /<meta\s+name="description"\s+content="([^"]*)"/i;
+    const titleReg = /<title[^>]*>([^<]*?)<\/title>/i;
+    const descReg = /<meta[^>]*\s+name="description"[^>]*\s+content="([^"]*)"/i;
     return {
       title: regExecResult(titleReg, this.html),
       desc: regExecResult(descReg, this.html),
@@ -32,8 +33,19 @@ export class BasePage {
   }
 
   private getFavicon(): string {
-    const favicon = regExecResult(/<link\s+rel="icon"\s+href="([^"]+)"/, this.html);
-    return favicon || `${this.url.origin}/favicon.ico`
+    let favicon = regExecResult([
+      /<link\s+rel="icon"\s+href="([^"]+)"/,
+      /<link[^>]*\s+rel="(?:shortcut|icon|\s)*"[^>]*\s+href="([^"]+)"/,
+    ], this.html);
+    favicon = favicon || `${this.url.origin}/favicon.ico`
+    if (favicon.startsWith('//')) {
+      favicon = this.url.protocol + favicon;
+    } else if (favicon.startsWith('/')) {
+      favicon = this.url.origin + favicon;
+    } else if (favicon.startsWith('.')) {
+      favicon = this.url.origin + join(this.url.pathname, '../', favicon);
+    }
+    return favicon;
   }
 
   private getContent(): string {

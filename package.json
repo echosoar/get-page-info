@@ -1,12 +1,12 @@
 {
   "name": "get-page-info",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "get web page info",
   "main": "./dist/index.js",
   "scripts": {
     "dev": "tsc -w",
     "build": "tsc",
-    "test": "jest",
+    "test": "jest --clearCache && jest",
     "coverage": "jest --coverage",
     "clean": "rm -rf node_modules/ package-lock.json dist"
   },
