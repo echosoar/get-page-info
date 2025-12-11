@@ -1,4 +1,3 @@
-import { join } from "path";
 import { IPageBaseInfo, IPageMainContentInfo, IPageAuthorInfo } from "../interface";
 import { getHtml, regExecResult, IHtmlResponse } from "../utils";
 
@@ -50,7 +49,12 @@ export class BasePage {
     } else if (favicon.startsWith('/')) {
       favicon = this.url.origin + favicon;
     } else if (favicon.startsWith('.')) {
-      favicon = this.url.origin + join(this.url.pathname, '../', favicon);
+      // Use URL constructor for proper path resolution
+      try {
+        favicon = new URL(favicon, this.url.href).href;
+      } catch {
+        favicon = this.url.origin + '/favicon.ico';
+      }
     }
     return favicon;
   }
@@ -89,7 +93,11 @@ export class BasePage {
   }
 
   private getKeywords(): string {
-    const keywordsReg = /<meta[^>]*\s+name="keywords"[^>]*\s+content="([^"]*)"/i;
+    // Handle both attribute orders: name-content and content-name
+    const keywordsReg = [
+      /<meta[^>]*\s+name="keywords"[^>]*\s+content="([^"]*)"/i,
+      /<meta[^>]*\s+content="([^"]*)"[^>]*\s+name="keywords"/i,
+    ];
     return regExecResult(keywordsReg, this.html);
   }
 
@@ -126,7 +134,12 @@ export class BasePage {
     } else if (cover.startsWith('/')) {
       cover = this.url.origin + cover;
     } else if (cover.startsWith('.')) {
-      cover = this.url.origin + join(this.url.pathname, '../', cover);
+      // Use URL constructor for proper path resolution
+      try {
+        cover = new URL(cover, this.url.href).href;
+      } catch {
+        cover = this.url.origin + '/' + cover;
+      }
     } else if (!cover.startsWith('http')) {
       cover = this.url.origin + '/' + cover;
     }

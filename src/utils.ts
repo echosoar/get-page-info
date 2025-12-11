@@ -36,7 +36,13 @@ export const getHtml = async (url: URL): Promise<IHtmlResponse> => {
     timeout: 5000,
     responseType: 'arraybuffer',
   }).then(res => {
-    serverIp = res.request?.socket?.remoteAddress;
+    // Extract server IP with error handling
+    // Note: This relies on internal axios/node implementation and may not be available in all environments
+    try {
+      serverIp = res.request?.socket?.remoteAddress;
+    } catch (e) {
+      // serverIp remains undefined if extraction fails
+    }
     return res.data;
   }).catch((e) => {
     return '';
