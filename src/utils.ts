@@ -20,7 +20,13 @@ export const omitText = (text: string, length = 100) => {
 }
 
 
-export const getHtml = async (url: URL) => {
+export interface IHtmlResponse {
+  html: string;
+  serverIp?: string;
+}
+
+export const getHtml = async (url: URL): Promise<IHtmlResponse> => {
+  let serverIp: string | undefined;
   let html = await axios.get(url.href, {
     headers: {
       'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36',
@@ -29,17 +35,20 @@ export const getHtml = async (url: URL) => {
     },
     timeout: 5000,
     responseType: 'arraybuffer',
-  }).then(res => res.data).catch((e) => {
+  }).then(res => {
+    serverIp = res.request?.socket?.remoteAddress;
+    return res.data;
+  }).catch((e) => {
     return '';
   });
 
   if (!html) {
-    return ''
+    return { html: '', serverIp }
   }
 
   let htmlStr = html.toString();
   if (htmlStr.includes("charset=gbk")) {
     htmlStr = iconv.decode(html, 'gbk');
   }
-  return htmlStr.replace(/(\n|\r)/g, ' ');
+  return { html: htmlStr.replace(/(\n|\r)/g, ' '), serverIp };
 }

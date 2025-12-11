@@ -1,18 +1,21 @@
 import { join } from "path";
 import { IPageBaseInfo, IPageMainContentInfo, IPageAuthorInfo } from "../interface";
-import { getHtml, regExecResult } from "../utils";
+import { getHtml, regExecResult, IHtmlResponse } from "../utils";
 
 export class BasePage {
   static pageName: string = '';
   static pageHost: string | string[] = '';
   protected url: URL;
   protected html = '';
+  protected serverIp?: string;
   constructor(url: URL) {
     this.url = url;
   }
 
   async getPage() {
-    this.html = await getHtml(this.url)
+    const response: IHtmlResponse = await getHtml(this.url);
+    this.html = response.html;
+    this.serverIp = response.serverIp;
   }
   getBaseInfo(): Partial<IPageBaseInfo> {
     const titleReg = /<title[^>]*>([^<]*?)<\/title>/i;
@@ -21,6 +24,9 @@ export class BasePage {
       title: regExecResult(titleReg, this.html),
       desc: regExecResult(descReg, this.html),
       favicon:  this.getFavicon(),
+      cover: this.getCoverImage(),
+      keywords: this.getKeywords(),
+      serverIp: this.serverIp,
     }
   }
   getAuthorInfo(): IPageAuthorInfo {
@@ -29,6 +35,7 @@ export class BasePage {
   getContentInfo(): IPageMainContentInfo {
     return {
       content: this.getContent(),
+      time: this.getTime(),
     }
   }
 
@@ -79,5 +86,72 @@ export class BasePage {
       contentList.push(content);
     }
     return contentList.join('\n');
+  }
+
+  private getKeywords(): string {
+    const keywordsReg = /<meta[^>]*\s+name="keywords"[^>]*\s+content="([^"]*)"/i;
+    return regExecResult(keywordsReg, this.html);
+  }
+
+  private getCoverImage(): string {
+    // Priority 1: og:image and similar meta tags
+    let cover = regExecResult([
+      /<meta[^>]*\s+property="og:image"[^>]*\s+content="([^"]+)"/i,
+      /<meta[^>]*\s+name="twitter:image"[^>]*\s+content="([^"]+)"/i,
+      /<meta[^>]*\s+itemprop="image"[^>]*\s+content="([^"]+)"/i,
+    ], this.html);
+
+    // Priority 2: First img tag in HTML
+    if (!cover) {
+      cover = regExecResult(/<img[^>]*\s+src="([^"]+)"/i, this.html);
+    }
+
+    // Priority 3: Preload images
+    if (!cover) {
+      cover = regExecResult(/<link[^>]*\s+rel="preload"[^>]*\s+as="image"[^>]*\s+href="([^"]+)"/i, this.html);
+    }
+
+    // Priority 4: Background CSS images
+    if (!cover) {
+      cover = regExecResult(/background(?:-image)?\s*:\s*url\(['"]?([^'")]+)['"]?\)/i, this.html);
+    }
+
+    if (!cover) {
+      return '';
+    }
+
+    // Normalize URL
+    if (cover.startsWith('//')) {
+      cover = this.url.protocol + cover;
+    } else if (cover.startsWith('/')) {
+      cover = this.url.origin + cover;
+    } else if (cover.startsWith('.')) {
+      cover = this.url.origin + join(this.url.pathname, '../', cover);
+    } else if (!cover.startsWith('http')) {
+      cover = this.url.origin + '/' + cover;
+    }
+    
+    return cover;
+  }
+
+  private getTime(): number | undefined {
+    // Try to extract time from various meta tag formats
+    const timeStr = regExecResult([
+      /<meta[^>]*\s+property="article:published_time"[^>]*\s+content="([^"]+)"/i,
+      /<meta[^>]*\s+property="og:updated_time"[^>]*\s+content="([^"]+)"/i,
+      /<meta[^>]*\s+property="article:modified_time"[^>]*\s+content="([^"]+)"/i,
+      /<meta[^>]*\s+name="pubdate"[^>]*\s+content="([^"]+)"/i,
+      /<meta[^>]*\s+name="publishdate"[^>]*\s+content="([^"]+)"/i,
+      /<meta[^>]*\s+itemprop="datePublished"[^>]*\s+content="([^"]+)"/i,
+      /<meta[^>]*\s+itemprop="dateModified"[^>]*\s+content="([^"]+)"/i,
+    ], this.html);
+
+    if (!timeStr) {
+      return undefined;
+    }
+
+    // Try to parse the time string
+    const timestamp = new Date(timeStr).getTime();
+    return isNaN(timestamp) ? undefined : timestamp;
   }
 }

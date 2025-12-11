@@ -3,6 +3,9 @@ export interface IPageBaseInfo {
   title: string;
   desc: string;
   favicon?: string;
+  cover?: string;
+  keywords?: string;
+  serverIp?: string;
 }
 
 export interface IPageInfo extends IPageBaseInfo {
@@ -12,7 +15,6 @@ export interface IPageInfo extends IPageBaseInfo {
 
 export interface IPageMainContentInfo {
   content: string;
-  cover?: string;
   time?: number;
 }
 export interface IPageAuthorInfo {
