@@ -7,6 +7,7 @@ export const getPageInfo = async (url: string, options: IPageInfoOptions = {}): 
   const defaultInfo: IPageInfo = {
     title: '',
     desc: '',
+    status: 200,
     url,
   };
   let urlInfo: URL;

@@ -6,6 +6,7 @@ export interface IPageBaseInfo {
   cover?: string;
   keywords?: string;
   serverIp?: string;
+  status: number;
 }
 
 export interface IPageInfo extends IPageBaseInfo {

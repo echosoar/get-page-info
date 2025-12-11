@@ -1,11 +1,13 @@
 import { IPageBaseInfo, IPageMainContentInfo, IPageAuthorInfo } from "../interface";
 import { getHtml, regExecResult, IHtmlResponse } from "../utils";
+import { findMainNode, parseToTree } from "./tree";
 
 export class BasePage {
   static pageName: string = '';
   static pageHost: string | string[] = '';
   protected url: URL;
   protected html = '';
+  protected status: number = 200;
   protected serverIp?: string;
   constructor(url: URL) {
     this.url = url;
@@ -15,17 +17,17 @@ export class BasePage {
     const response: IHtmlResponse = await getHtml(this.url);
     this.html = response.html;
     this.serverIp = response.serverIp;
+    this.status = response.status;
   }
   getBaseInfo(): Partial<IPageBaseInfo> {
-    const titleReg = /<title[^>]*>([^<]*?)<\/title>/i;
-    const descReg = /<meta[^>]*\s+name="description"[^>]*\s+content="([^"]*)"/i;
     return {
-      title: regExecResult(titleReg, this.html),
-      desc: regExecResult(descReg, this.html),
+      title: this.getTitle(),
+      desc: this.getDescription(),
       favicon:  this.getFavicon(),
       cover: this.getCoverImage(),
       keywords: this.getKeywords(),
       serverIp: this.serverIp,
+      status: this.status,
     }
   }
   getAuthorInfo(): IPageAuthorInfo {
@@ -66,11 +68,23 @@ export class BasePage {
     }
     let content = bodyInfo[2];
     content = content.replace(/<script(\s+[^>]*)?>.*?<\/script>/g, '')
+    content = content.replace(/<!--(.*?)-->/g, '');
+    content = content.replace(/<style(\s+[^>]*)?>.*?<\/style>/g, '')
+    content = content.replace(/<svg(\s+[^>]*)?>.*?<\/svg>/g, '')
+    // 去除 form 元素
+    content = content.replace(/<form[^>]*>[\s\S]*?<\/form>/g, '');
     content = content.replace(/<header(\s+[^>]*)?>.*?<\/header>/g, '')
     content = content.replace(/<footer(\s+[^>]*)?>.*?<\/footer>/g, '')
-    content = content.replace(/<form(\s+[^>]*)?>.*?<\/form>/g, '')
-    content = content.replace(/<style(\s+[^>]*)?>.*?<\/style>/g, '')
     content = content.replace(/<textarea(\s+[^>]*)?>.*?<\/textarea>/g, '')
+    // 去除 img
+    content = content.replace(/<\/?(img|br|hr|input|tr|td|th|table)[^>]*>/g, '');
+
+    const treeNodes = parseToTree(content.trim());
+    const main = findMainNode(treeNodes);
+    if (main) {
+        return main.allContent.replace(/(\s){1,}/g, '$1').trim()
+    }
+  
     if (content.includes('<article')) {
       let articleInfo = /<article(\s+[^>]*)?>(.*)<\/article>/i.exec(this.html);
       if (articleInfo && articleInfo[2]) {
@@ -90,6 +104,25 @@ export class BasePage {
       contentList.push(content);
     }
     return contentList.join('\n');
+  }
+
+  private getTitle(): string {
+    const regs = [
+      /<meta[^>]*\s+name="article-?title"\s+content="([^"]+)"/i,
+      /<title[^>]*?>([^<]*?)<\/title>/i,
+      /<meta[^>]*\s+property="og:title"\s+content="([^"]+)"/i,
+      /<meta[^>]*\s+name="twitter:title"\s+content="([^"]+)"/i,
+    ];
+    return regExecResult(regs, this.html);
+  }
+
+  private getDescription(): string {
+    const regs = [
+      /<meta[^>]*\s+name="description"[^>]*\s+content="([^"]*)"/i,
+      /<meta[^>]*\s+property="og:description"\s+content="([^"]+)"/i,
+      /<meta[^>]*\s+name="twitter:description"\s+content="([^"]+)"/i,
+    ];
+    return regExecResult(regs, this.html);
   }
 
   private getKeywords(): string {
